@@ -18,3 +18,4 @@ Thumbs.db
 .codex/
 tmp/
 Frontend/.verify-*/
+Frontend/.vercel/
