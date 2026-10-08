@@ -2,10 +2,8 @@ node_modules/
 dist/
 .vite/
 coverage/
+.env
+.env.*
 *.local
 *.log
 *.tsbuildinfo
-.env
-.env.*
-!.env.example
-.vercel/
