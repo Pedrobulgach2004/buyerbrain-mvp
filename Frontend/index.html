@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="BuyerBrain recupera carritos abandonados con promociones personalizadas y mide las ventas generadas." />
+    <title>BuyerBrain — Recuperá ventas automáticamente</title>
+    <script>
+      try {
+        if (localStorage.getItem('buyerbrain-theme') === 'light') document.documentElement.dataset.theme = 'light'
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
