@@ -1,0 +1,141 @@
+{
+  "name": "BuyerBrain - Telegram envío de promoción",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "buyerbrain-telegram-send",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://buyerbrain-mvp-3tjb.vercel.app,http://localhost:5180"
+        }
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000001",
+      "name": "Webhook envío",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 300],
+      "webhookId": "buyerbrain-telegram-send"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vxtxhyakzkcsuonggyri.supabase.co/rest/v1/rpc/tomar_envio_demo_telegram",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_envio_id: $json.body.envio_id, p_dispatch_token: $json.body.dispatch_token }) }}",
+        "options": {}
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Supabase: tomar envío",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ 'Hola, ' + String($json.customer_name ?? '').split(' ')[0] + '. Dejaste tu ' + $json.product_name + ' en el carrito. Usá ' + $json.coupon_code + ' y obtené ' + Number($json.coupon_percentage) + '% de descuento. Total final: ARS ' + Number($json.discounted_total).toLocaleString('es-AR') + '. Promoción de demostración; no genera una compra real.' }}",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000003",
+      "name": "Telegram: enviar promoción",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [500, 200],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vxtxhyakzkcsuonggyri.supabase.co/rest/v1/rpc/confirmar_envio_demo_telegram",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_envio_id: $('Supabase: tomar envío').item.json.send_id, p_exitoso: true, p_message_id: String($json.result?.message_id ?? $json.message_id ?? '') }) }}",
+        "options": {}
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000004",
+      "name": "Supabase: confirmar enviado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vxtxhyakzkcsuonggyri.supabase.co/rest/v1/rpc/confirmar_envio_demo_telegram",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_envio_id: $('Supabase: tomar envío').item.json.send_id, p_exitoso: false, p_error: String($json.error?.message ?? $json.error ?? 'Telegram rechazó el envío.').slice(0, 300) }) }}",
+        "options": {}
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000005",
+      "name": "Supabase: registrar fallo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}",
+        "options": { "responseCode": 200 }
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000006",
+      "name": "Responder OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 120]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, error: 'telegram_failed' } }}",
+        "options": { "responseCode": 502 }
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000007",
+      "name": "Responder fallo Telegram",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { ok: false, error: 'dispatch_invalid' } }}",
+        "options": { "responseCode": 409 }
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000008",
+      "name": "Responder permiso inválido",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [500, 460]
+    }
+  ],
+  "connections": {
+    "Webhook envío": { "main": [[{ "node": "Supabase: tomar envío", "type": "main", "index": 0 }]] },
+    "Supabase: tomar envío": {
+      "main": [
+        [{ "node": "Telegram: enviar promoción", "type": "main", "index": 0 }],
+        [{ "node": "Responder permiso inválido", "type": "main", "index": 0 }]
+      ]
+    },
+    "Telegram: enviar promoción": {
+      "main": [
+        [{ "node": "Supabase: confirmar enviado", "type": "main", "index": 0 }],
+        [{ "node": "Supabase: registrar fallo", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase: confirmar enviado": { "main": [[{ "node": "Responder OK", "type": "main", "index": 0 }]] },
+    "Supabase: registrar fallo": { "main": [[{ "node": "Responder fallo Telegram", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
