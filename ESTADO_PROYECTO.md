@@ -4,7 +4,8 @@ Registro de trabajo de la etapa de recuperación del MVP. Se actualiza en cada e
 Rama de trabajo: `fix/checkpoint-2`.
 
 ## Estado actual (18/10/2026)
-- Etapa A (entorno) completada. Etapa B (verificación en vivo) pendiente.
+- Etapa A (entorno) completada. Etapa B (verificación en vivo) completada salvo cierre de sesión.
+- App local: `npx pnpm@10 run dev` en `Frontend/` (o el preview "frontend" del panel, puerto 5180).
 - Decisiones tomadas:
   - Tiendanube se mantiene **simulada** dentro de Supabase y se rotula como demostración.
   - Telegram debe funcionar **de forma real** para el checkpoint (bot + n8n mínimo).
@@ -36,13 +37,20 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 | 18/10/2026 | `pnpm run lint` | OK, sin advertencias |
 | 18/10/2026 | App publicada: Inicio, Registro, Ingresar | Cargan sin errores de consola |
 | 18/10/2026 | Supabase publicado | Responde; registro habilitado; confirmación de email desactivada |
+| 18/10/2026 | App local (`localhost:5180`) conectada a Supabase | OK, sin errores de consola |
+| 18/10/2026 | Registro + ingreso con cuenta de prueba (usuario) | OK: aterriza en `/conexion`. No se reprodujo la carrera de sesión (1 intento) |
+| 18/10/2026 | Autorizar tienda demo | OK: checkout "Lucía Gómez · Campera Nébula · $120.000" sincronizado → las RPC de Tiendanube están instaladas |
+| 18/10/2026 | Guardar reglas (15%, stock 3, 7 días, 48 h) | OK: "Automatización activa", demo de 30 días, diálogo → actividad |
+| 18/10/2026 | Procesar oportunidad | OK: elegible, 3 controles aprobados, cupón confirmado |
+| 18/10/2026 | Simular compra | **BLOQUEADO**: la pantalla exige Telegram conectado y mensaje enviado (`App.tsx:506-508`); no existe forma de terminar la demo sin Telegram |
+| 18/10/2026 | Pantalla Telegram sin bot configurado | Muestra aviso "Falta el nombre público del bot"; no rompe |
+| 18/10/2026 | Dashboard y Resumen | Cargan datos reales (1 carrito, 1 cupón, 0 recuperados). Los botones 24 h / 7 días / 30 días solo cambian el texto, no los números |
+| 18/10/2026 | Deploy de Vercel vs repo | Mismo código (contiene los mismos textos y el mismo bloqueo) |
 
 ## Pendientes y bloqueos
-- Crear `Frontend/.env.local` (usuario).
-- Cuenta de prueba para recorrer el flujo (usuario).
-- Verificar en Supabase que existan las funciones de las 6 migraciones (usuario).
+- **Bloqueante confirmado**: la demo no puede llegar a "compra simulada" sin Telegram operativo.
 - Bot de Telegram (@BotFather) y elección de dónde corre n8n (usuario).
-- El bundle publicado en Vercel (~520 kB) es más grande que el que genera el repo (~310 kB): verificar que el deploy corresponda al código actual [hipótesis].
+- Probar cierre de sesión y nuevo ingreso (requiere al usuario para escribir la contraseña).
 
 ## Próximos pasos
 1. Etapa B: recorrer el flujo real con una cuenta de prueba y confirmar/descartar hipótesis.
