@@ -25,7 +25,9 @@ type TelegramDispatch = {
 }
 
 const botUsername = (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '').trim()
-const dispatchWebhookUrl = (import.meta.env.VITE_N8N_TELEGRAM_WEBHOOK_URL as string | undefined)?.trim()
+const n8nWebhookUrl = (import.meta.env.VITE_N8N_TELEGRAM_WEBHOOK_URL as string | undefined)?.trim()
+// En producción el navegador llama a la función de Vercel (api/telegram-send.ts), que reenvía a n8n desde el servidor.
+const dispatchWebhookUrl = n8nWebhookUrl && import.meta.env.PROD ? '/api/telegram-send' : n8nWebhookUrl
 
 async function invoke<T>(name: string, args?: Record<string, unknown>): Promise<T> {
   if (!supabase) throw new Error('Falta configurar Supabase.')
