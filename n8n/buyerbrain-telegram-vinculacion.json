@@ -1,0 +1,121 @@
+{
+  "name": "BuyerBrain - Telegram vinculación",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [0, 300],
+      "webhookId": "buyerbrain-telegram-vinculacion"
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $json.message ?? {};\nconst text = String(message.text ?? '').trim();\nconst match = text.match(/^\\/start\\s+([0-9a-fA-F-]{36})$/);\nreturn [{ json: {\n  has_token: Boolean(match),\n  token: match ? match[1] : null,\n  chat_id: message.chat?.id != null ? String(message.chat.id) : null,\n  username: message.chat?.username ?? message.from?.username ?? null,\n} }];"
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000002",
+      "name": "Leer token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.has_token }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "true", "singleValue": true }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000003",
+      "name": "¿Tiene token?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vxtxhyakzkcsuonggyri.supabase.co/rest/v1/rpc/consumir_vinculacion_demo_telegram",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_token: $json.token, p_chat_id: $json.chat_id, p_username: $json.username }) }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000004",
+      "name": "Supabase: consumir vinculación",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 200],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Leer token').item.json.chat_id }}",
+        "text": "Listo. Autorizaste a BuyerBrain Demo a enviarte la promoción de este ensayo.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000005",
+      "name": "Responder: vinculado",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [940, 120]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Leer token').item.json.chat_id }}",
+        "text": "Este enlace ya no es válido. Generá uno nuevo desde BuyerBrain.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000006",
+      "name": "Responder: enlace inválido",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [940, 300]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "Hola. Para recibir la promoción de demostración, abrí el enlace que genera BuyerBrain en Conexiones → Telegram.",
+        "additionalFields": { "appendAttribution": false }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000007",
+      "name": "Responder: sin token",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [680, 460]
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": { "main": [[{ "node": "Leer token", "type": "main", "index": 0 }]] },
+    "Leer token": { "main": [[{ "node": "¿Tiene token?", "type": "main", "index": 0 }]] },
+    "¿Tiene token?": {
+      "main": [
+        [{ "node": "Supabase: consumir vinculación", "type": "main", "index": 0 }],
+        [{ "node": "Responder: sin token", "type": "main", "index": 0 }]
+      ]
+    },
+    "Supabase: consumir vinculación": {
+      "main": [
+        [{ "node": "Responder: vinculado", "type": "main", "index": 0 }],
+        [{ "node": "Responder: enlace inválido", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
