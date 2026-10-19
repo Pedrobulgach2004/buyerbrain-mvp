@@ -29,6 +29,8 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 ## Cambios implementados
 | Fecha | Cambio | Verificación |
 |---|---|---|
+| 18/10/2026 | Pantalla de vinculación de Telegram: QR para escanear con el celular, mensaje `/start <código>` con botón Copiar, aviso de vencimiento con "Generar otro enlace", aviso de que un enlace nuevo anula el anterior y detección automática de la vinculación (consulta cada 4 s). Librería `qrcode@1.5.4` (+26 kB) | Build y lint OK; diseño revisado en 1280 px y 375 px; QR escaneado con el celular → vinculación detectada sola |
+| 18/10/2026 | Vercel: variables `VITE_TELEGRAM_BOT_USERNAME` y `VITE_N8N_TELEGRAM_WEBHOOK_URL` cargadas y redeploy (usuario) | El bundle publicado contiene el bot y el webhook |
 | 18/10/2026 | Flujos n8n de vinculación y envío (`n8n/`) importados y publicados en `n8n.tucbbs.com.ar` con credenciales "BuyerBrain bot (Telegram)" y "Supabase BuyerBrain backend" | Recorrido completo OK (ver pruebas) |
 | 18/10/2026 | Versiones de dependencias fijadas en `Frontend/package.json` (mismas que ya resolvía el lockfile) y `engines.node >= 20.19` | `pnpm install` sin cambios de versión; build y lint OK |
 
@@ -52,16 +54,19 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 | 18/10/2026 | Bot @buyerbrain_bot responde a "hola" | OK, respuesta del flujo de vinculación |
 | 18/10/2026 | Vinculación con `/start <código>` | OK: Telegram "conectada", consentimiento "otorgado" |
 | 18/10/2026 | Enviar promoción | OK: n8n confirmó el envío (mensaje 8); el usuario recibió el mensaje |
+| 18/10/2026 | Reinicio de demo + recorrido completo con la pantalla nueva (QR) | OK: vinculación por QR, envío (mensaje 11), compra atribuida, $102.000 |
 | 18/10/2026 | Simular compra + Dashboard | OK: "BuyerBrain recuperó $102.000"; dashboard 1 carrito, 1 cupón, 1 recuperado, $102.000 |
 
 ## Pendientes y bloqueos
-- **Vercel**: cargar `VITE_TELEGRAM_BOT_USERNAME=buyerbrain_bot` y `VITE_N8N_TELEGRAM_WEBHOOK_URL=https://n8n.tucbbs.com.ar/webhook/buyerbrain-telegram-send` y volver a desplegar (usuario, en el panel de Vercel).
-- **Fricción en la vinculación**: el botón "Abrir bot" no funciona dentro de navegadores embebidos y en algunos clientes no reenvía el código; cada "Generar enlace" anula el anterior y la pantalla no lo avisa. Mejora propuesta: QR + texto `/start <código>` copiable.
-- Fallas de UI observadas: "Válido hasta 10:55 p. m.." (punto doble); el envío tarda ~5–10 s sin más feedback que "Enviando con n8n…".
+- **Vercel**: falta publicar la pantalla nueva (requiere subir la rama y unirla a `main`, que es lo que despliega Vercel) y validar el recorrido en la URL publicada.
+- Resuelto en local: fricción del botón "Start" (ver cambios). Pendiente de publicar.
+- Fallas de UI observadas: el envío tarda ~5–10 s sin más feedback que "Enviando con n8n…".
 - El primer bot (@buyerbrainbot) quedó sin uso; puede eliminarse desde @BotFather.
+- El bundle de producción pesa ~550 kB (aviso de Vite por superar 500 kB); el peso real viene de Supabase y React, no de la librería de QR.
+- Configuración → Conexiones muestra Telegram "Pendiente" aunque esté vinculado (usa un estado de cuenta desactualizado) [a revisar].
 - Probar cierre de sesión y nuevo ingreso (requiere al usuario para escribir la contraseña).
 
 ## Próximos pasos
-1. Configurar Telegram en Vercel y validar el recorrido en la URL publicada.
+1. Publicar la rama en GitHub/Vercel y validar el recorrido en la URL publicada.
 2. Etapa C: correcciones P1 y P2 (incluida la mejora de la vinculación).
 3. Etapa E: imágenes, seguridad RLS, limpieza y documentación; deploy.

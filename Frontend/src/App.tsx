@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, FormEvent, PointerEvent, ReactElement } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 import type { User } from '@supabase/supabase-js'
+import QRCode from 'qrcode'
 import { loadAccountSnapshot, loadLiveMetrics, updateAccountProfile } from './lib/account'
 import type { AccountSnapshot, LiveMetrics } from './lib/account'
 import { tiendanubeDemoGateway } from './lib/tiendanube'
@@ -361,6 +362,58 @@ function TiendanubeConnection() {
   </main></>
 }
 
+type TelegramLinkStepProps = { link: TelegramLink; botUrl: string; isChecking: boolean; isCreating: boolean; onCheck: () => void; onRegenerate: () => void }
+
+function TelegramLinkStep({ link, botUrl, isChecking, isCreating, onCheck, onRegenerate }: TelegramLinkStepProps) {
+  const [qrDataUrl, setQrDataUrl] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
+  const startCommand = `/start ${link.token}`
+  const expiresAt = new Date(link.expires_at)
+  const expired = now >= expiresAt.getTime()
+  const expiresLabel = new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(expiresAt)
+
+  useEffect(() => {
+    let active = true
+    QRCode.toDataURL(botUrl, { margin: 1, width: 220, color: { dark: '#0b0a22', light: '#ffffff' } })
+      .then((dataUrl) => { if (active) setQrDataUrl(dataUrl) })
+      .catch(() => { if (active) setQrDataUrl('') })
+    return () => { active = false }
+  }, [botUrl])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const copyCommand = async () => {
+    try {
+      await navigator.clipboard.writeText(startCommand)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2500)
+    } catch {
+      setCopied(false)
+    }
+  }
+
+  if (expired) return <div className="telegram-link-step is-expired"><div><h3>El enlace venció</h3><p>Los enlaces duran 15 minutos. Generá uno nuevo para vincular la cuenta de prueba.</p></div><button type="button" className="button button-primary" disabled={isCreating} onClick={onRegenerate}>{isCreating ? 'Generando…' : <>Generar otro enlace <Arrow /></>}</button></div>
+
+  return <div className="telegram-link-step telegram-link-options">
+    <div className="telegram-link-qr">{qrDataUrl ? <img src={qrDataUrl} width={220} height={220} alt={`Código QR para abrir @${telegramDemoGateway.botUsername} en Telegram`} /> : <span>Generando QR…</span>}</div>
+    <div className="telegram-link-instructions">
+      <h3>Enlace seguro listo</h3>
+      <ol>
+        <li><strong>Escaneá el QR con la cámara del celular.</strong> Se abre Telegram: tocá <em>Iniciar</em>.</li>
+        <li><strong>¿Sin celular a mano?</strong> Abrí el chat con @{telegramDemoGateway.botUsername} y enviá este mensaje:</li>
+      </ol>
+      <div className="telegram-start-command"><code>{startCommand}</code><button type="button" className="button button-secondary" onClick={() => void copyCommand()}>{copied ? 'Copiado' : 'Copiar'}</button></div>
+      <small>Válido hasta las {expiresLabel} · Solo funciona una vez y generar otro enlace anula este.</small>
+      <div className="telegram-link-actions"><button type="button" className="button button-primary" disabled={isChecking} onClick={onCheck}>{isChecking ? 'Comprobando…' : 'Ya inicié el bot · Comprobar'}</button><a className="button button-secondary" href={botUrl} target="_blank" rel="noreferrer">Abrir @{telegramDemoGateway.botUsername} <Arrow /></a><button type="button" className="button button-secondary" disabled={isCreating} onClick={onRegenerate}>{isCreating ? 'Generando…' : 'Generar otro enlace'}</button></div>
+      <p className="telegram-link-hint">Esta pantalla se actualiza sola cuando Telegram confirma la vinculación.</p>
+    </div>
+  </div>
+}
+
 function TelegramConnection() {
   const { account, accountError, refreshAccount } = useAuthSession()
   const [telegramState, setTelegramState] = useState<TelegramDemoState | null>(null)
@@ -393,6 +446,21 @@ function TelegramConnection() {
     return () => { active = false }
   }, [])
 
+  const isLinked = telegramState?.connection_state === 'conectada' && telegramState.consent_state === 'otorgado'
+  const refreshAccountRef = useRef(refreshAccount)
+  useEffect(() => { refreshAccountRef.current = refreshAccount })
+  useEffect(() => {
+    if (!link || isLinked) return
+    const timer = window.setInterval(() => {
+      if (Date.now() >= new Date(link.expires_at).getTime()) return
+      telegramDemoGateway.getState().then((nextState) => {
+        setTelegramState(nextState)
+        if (nextState.connection_state === 'conectada' && nextState.consent_state === 'otorgado') void refreshAccountRef.current()
+      }).catch(() => undefined)
+    }, 4000)
+    return () => window.clearInterval(timer)
+  }, [link, isLinked])
+
   const createLink = async () => {
     setIsCreatingLink(true)
     setError('')
@@ -406,7 +474,7 @@ function TelegramConnection() {
   }
 
   if (!account) return <><Header /><main className="demo-flow page-shell"><p className="form-error" role="alert">{accountError || 'No pudimos cargar tu cuenta.'}</p></main></>
-  const connected = telegramState?.connection_state === 'conectada' && telegramState.consent_state === 'otorgado'
+  const connected = isLinked
   const botUrl = link ? telegramDemoGateway.getBotUrl(link.token) : null
 
   return <><Header /><PlanStatusBar /><main className="demo-flow page-shell">
@@ -415,7 +483,7 @@ function TelegramConnection() {
     <section className={`telegram-connect-panel ${connected ? 'is-connected' : ''}`} aria-live="polite">
       <div className="telegram-connect-summary"><span className="telegram-provider-mark"><TelegramMark /></span><div><p>Canal de promociones</p><h2>@{telegramDemoGateway.botUsername ?? 'bot pendiente'}</h2><span>{connected ? `Consentimiento confirmado${telegramState?.telegram_username ? ` por @${telegramState.telegram_username}` : ''}` : 'Esperando el consentimiento de la cuenta de prueba'}</span></div><strong>{connected ? 'Conectado' : 'Pendiente'}</strong></div>
       {!telegramDemoGateway.botUsername && <div className="telegram-setup-warning"><h3>Falta el nombre público del bot</h3><p>Configurá <code>VITE_TELEGRAM_BOT_USERNAME</code> y reiniciá el servidor.</p></div>}
-      {connected ? <div className="telegram-consent-success"><div><strong>Telegram quedó autorizado.</strong><span>BuyerBrain guardó el consentimiento y ya puede solicitar a n8n el envío del cupón.</span></div><Link className="button button-primary" to="/actividad-tiendanube">Volver a la actividad <Arrow /></Link></div> : link && botUrl ? <div className="telegram-link-step"><div><h3>Enlace seguro listo</h3><p>Abrilo, presioná “Iniciar” en Telegram y luego regresá para comprobar la vinculación.</p><small>Válido hasta {new Intl.DateTimeFormat('es-AR', { hour: '2-digit', minute: '2-digit' }).format(new Date(link.expires_at))}.</small></div><a className="button button-primary" href={botUrl} target="_blank" rel="noreferrer">Abrir @{telegramDemoGateway.botUsername} <Arrow /></a><button type="button" className="button button-secondary" disabled={isLoading} onClick={() => void loadState()}>{isLoading ? 'Comprobando…' : 'Ya inicié el bot · Comprobar'}</button></div> : <div className="telegram-connect-action"><div><h3>Generá el vínculo de consentimiento</h3><p>El enlace dura 15 minutos y solo puede usarse una vez.</p></div><button type="button" className="button button-primary" disabled={isLoading || isCreatingLink || !telegramDemoGateway.botUsername} onClick={() => void createLink()}>{isCreatingLink ? 'Generando…' : <>Generar enlace seguro <Arrow /></>}</button></div>}
+      {connected ? <div className="telegram-consent-success"><div><strong>Telegram quedó autorizado.</strong><span>BuyerBrain guardó el consentimiento y ya puede solicitar a n8n el envío del cupón.</span></div><Link className="button button-primary" to="/actividad-tiendanube">Volver a la actividad <Arrow /></Link></div> : link && botUrl ? <TelegramLinkStep link={link} botUrl={botUrl} isChecking={isLoading} isCreating={isCreatingLink} onCheck={() => void loadState()} onRegenerate={() => void createLink()} /> : <div className="telegram-connect-action"><div><h3>Generá el vínculo de consentimiento</h3><p>El enlace dura 15 minutos y solo puede usarse una vez.</p></div><button type="button" className="button button-primary" disabled={isLoading || isCreatingLink || !telegramDemoGateway.botUsername} onClick={() => void createLink()}>{isCreatingLink ? 'Generando…' : <>Generar enlace seguro <Arrow /></>}</button></div>}
     </section>
     <p className="demo-disclosure">El cliente, el checkout y la promoción son ficticios. El mensaje sí se enviará a la cuenta de Telegram que acepte este vínculo.</p>
   </main></>
