@@ -5,7 +5,7 @@ Rama de trabajo: `fix/checkpoint-2`.
 
 ## Estado actual (18/10/2026)
 - Etapa A (entorno) y Etapa B (verificación en vivo) completadas, salvo cierre de sesión.
-- Etapa D (Telegram real) **funcionando en local**: recorrido completo de punta a punta verificado el 18/10/2026. Falta configurarlo en Vercel.
+- Etapa D (Telegram real) **funcionando en local y en la URL publicada de Vercel** (19/10/2026).
 - App local: `npx pnpm@10 run dev` en `Frontend/` (o el preview "frontend" del panel, puerto 5180).
 - Decisiones tomadas:
   - Tiendanube se mantiene **simulada** dentro de Supabase y se rotula como demostración.
@@ -29,7 +29,7 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 ## Cambios implementados
 | Fecha | Cambio | Verificación |
 |---|---|---|
-| 18/10/2026 | Función de Vercel `Frontend/api/telegram-send.ts`: en producción el navegador envía a `/api/telegram-send` (mismo dominio) y el servidor reenvía a n8n. Valida los datos y usa la variable ya cargada. `vercel.json` deja de redirigir `/api/*` | Prueba local: datos inválidos → 400; token inexistente → 409 desde n8n. Falta publicar |
+| 18/10/2026 | Función de Vercel `Frontend/api/telegram-send.ts`: en producción el navegador envía a `/api/telegram-send` (mismo dominio) y el servidor reenvía a n8n. Valida los datos y usa la variable ya cargada. `vercel.json` deja de redirigir `/api/*` | Prueba local: datos inválidos → 400; token inexistente → 409 desde n8n. Publicada (merge del usuario): `/api/telegram-send` responde 400 ante datos inválidos |
 | 18/10/2026 | Pantalla de vinculación de Telegram: QR para escanear con el celular, mensaje `/start <código>` con botón Copiar, aviso de vencimiento con "Generar otro enlace", aviso de que un enlace nuevo anula el anterior y detección automática de la vinculación (consulta cada 4 s). Librería `qrcode@1.5.4` (+26 kB) | Build y lint OK; diseño revisado en 1280 px y 375 px; QR escaneado con el celular → vinculación detectada sola |
 | 18/10/2026 | Vercel: variables `VITE_TELEGRAM_BOT_USERNAME` y `VITE_N8N_TELEGRAM_WEBHOOK_URL` cargadas y redeploy (usuario) | El bundle publicado contiene el bot y el webhook |
 | 18/10/2026 | Flujos n8n de vinculación y envío (`n8n/`) importados y publicados en `n8n.tucbbs.com.ar` con credenciales "BuyerBrain bot (Telegram)" y "Supabase BuyerBrain backend" | Recorrido completo OK (ver pruebas) |
@@ -57,11 +57,12 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 | 18/10/2026 | Enviar promoción | OK: n8n confirmó el envío (mensaje 8); el usuario recibió el mensaje |
 | 18/10/2026 | Reinicio de demo + recorrido completo con la pantalla nueva (QR) | OK: vinculación por QR, envío (mensaje 11), compra atribuida, $102.000 |
 | 18/10/2026 | Recorrido en Vercel desde el navegador del usuario | Vinculación por QR OK; **"Enviar promoción" falla con "Failed to fetch"**: el envío queda "pendiente" y nunca llega a n8n. La misma llamada desde otro navegador sí llega (CORS OK). Causa: el navegador o la red del usuario bloquean el dominio de n8n (también en modo privado) |
+| 19/10/2026 | Reintento de "Enviar promoción" en Vercel desde el navegador del usuario, tras publicar la función | OK: el mensaje llegó a Telegram (confirmado por el usuario) |
 | 18/10/2026 | Simular compra + Dashboard | OK: "BuyerBrain recuperó $102.000"; dashboard 1 carrito, 1 cupón, 1 recuperado, $102.000 |
 
 ## Pendientes y bloqueos
-- **Vercel**: falta publicar la pantalla nueva (requiere subir la rama y unirla a `main`, que es lo que despliega Vercel) y validar el recorrido en la URL publicada.
-- Resuelto en local: fricción del botón "Start" (ver cambios). Pendiente de publicar.
+- Confirmar en el dashboard publicado que la compra simulada quedó en $102.000 (el usuario confirmó el envío; la compra no fue verificada por Claude).
+- Día del checkpoint: probar antes desde la computadora y red donde se hará la demo.
 - Fallas de UI observadas: el envío tarda ~5–10 s sin más feedback que "Enviando con n8n…".
 - El primer bot (@buyerbrainbot) quedó sin uso; puede eliminarse desde @BotFather.
 - El bundle de producción pesa ~550 kB (aviso de Vite por superar 500 kB); el peso real viene de Supabase y React, no de la librería de QR.
@@ -69,6 +70,5 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 - Probar cierre de sesión y nuevo ingreso (requiere al usuario para escribir la contraseña).
 
 ## Próximos pasos
-1. Publicar la rama en GitHub/Vercel y validar el recorrido en la URL publicada.
-2. Etapa C: correcciones P1 y P2 (incluida la mejora de la vinculación).
-3. Etapa E: imágenes, seguridad RLS, limpieza y documentación; deploy.
+1. Etapa C: correcciones P1 y P2 (botones y destinos, datos fijos en pantalla, reproceso de oportunidad bloqueada, logout ante error, validación de reglas, estado de Telegram en Configuración).
+2. Etapa E: imágenes, seguridad RLS, limpieza y documentación; deploy.
