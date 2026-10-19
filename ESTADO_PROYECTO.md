@@ -4,7 +4,8 @@ Registro de trabajo de la etapa de recuperación del MVP. Se actualiza en cada e
 Rama de trabajo: `fix/checkpoint-2`.
 
 ## Estado actual (18/10/2026)
-- Etapa A (entorno) completada. Etapa B (verificación en vivo) completada salvo cierre de sesión.
+- Etapa A (entorno) y Etapa B (verificación en vivo) completadas, salvo cierre de sesión.
+- Etapa D (Telegram real) **funcionando en local**: recorrido completo de punta a punta verificado el 18/10/2026. Falta configurarlo en Vercel.
 - App local: `npx pnpm@10 run dev` en `Frontend/` (o el preview "frontend" del panel, puerto 5180).
 - Decisiones tomadas:
   - Tiendanube se mantiene **simulada** dentro de Supabase y se rotula como demostración.
@@ -28,6 +29,7 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 ## Cambios implementados
 | Fecha | Cambio | Verificación |
 |---|---|---|
+| 18/10/2026 | Flujos n8n de vinculación y envío (`n8n/`) importados y publicados en `n8n.tucbbs.com.ar` con credenciales "BuyerBrain bot (Telegram)" y "Supabase BuyerBrain backend" | Recorrido completo OK (ver pruebas) |
 | 18/10/2026 | Versiones de dependencias fijadas en `Frontend/package.json` (mismas que ya resolvía el lockfile) y `engines.node >= 20.19` | `pnpm install` sin cambios de versión; build y lint OK |
 
 ## Pruebas realizadas
@@ -46,14 +48,20 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 | 18/10/2026 | Pantalla Telegram sin bot configurado | Muestra aviso "Falta el nombre público del bot"; no rompe |
 | 18/10/2026 | Dashboard y Resumen | Cargan datos reales (1 carrito, 1 cupón, 0 recuperados). Los botones 24 h / 7 días / 30 días solo cambian el texto, no los números |
 | 18/10/2026 | Deploy de Vercel vs repo | Mismo código (contiene los mismos textos y el mismo bloqueo) |
+| 18/10/2026 | Webhook de envío: CORS y token inválido | Preflight 204 con origen permitido; token inválido → 409 `dispatch_invalid` |
+| 18/10/2026 | Bot @buyerbrain_bot responde a "hola" | OK, respuesta del flujo de vinculación |
+| 18/10/2026 | Vinculación con `/start <código>` | OK: Telegram "conectada", consentimiento "otorgado" |
+| 18/10/2026 | Enviar promoción | OK: n8n confirmó el envío (mensaje 8); el usuario recibió el mensaje |
+| 18/10/2026 | Simular compra + Dashboard | OK: "BuyerBrain recuperó $102.000"; dashboard 1 carrito, 1 cupón, 1 recuperado, $102.000 |
 
 ## Pendientes y bloqueos
-- **Bloqueante confirmado**: la demo no puede llegar a "compra simulada" sin Telegram operativo.
-- Bot de Telegram (@BotFather) y elección de dónde corre n8n (usuario).
+- **Vercel**: cargar `VITE_TELEGRAM_BOT_USERNAME=buyerbrain_bot` y `VITE_N8N_TELEGRAM_WEBHOOK_URL=https://n8n.tucbbs.com.ar/webhook/buyerbrain-telegram-send` y volver a desplegar (usuario, en el panel de Vercel).
+- **Fricción en la vinculación**: el botón "Abrir bot" no funciona dentro de navegadores embebidos y en algunos clientes no reenvía el código; cada "Generar enlace" anula el anterior y la pantalla no lo avisa. Mejora propuesta: QR + texto `/start <código>` copiable.
+- Fallas de UI observadas: "Válido hasta 10:55 p. m.." (punto doble); el envío tarda ~5–10 s sin más feedback que "Enviando con n8n…".
+- El primer bot (@buyerbrainbot) quedó sin uso; puede eliminarse desde @BotFather.
 - Probar cierre de sesión y nuevo ingreso (requiere al usuario para escribir la contraseña).
 
 ## Próximos pasos
-1. Etapa B: recorrer el flujo real con una cuenta de prueba y confirmar/descartar hipótesis.
-2. Etapa C: correcciones P1 y P2.
-3. Etapa D: Telegram real.
-4. Etapa E: imágenes, seguridad RLS, limpieza y documentación; deploy.
+1. Configurar Telegram en Vercel y validar el recorrido en la URL publicada.
+2. Etapa C: correcciones P1 y P2 (incluida la mejora de la vinculación).
+3. Etapa E: imágenes, seguridad RLS, limpieza y documentación; deploy.
