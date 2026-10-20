@@ -148,16 +148,22 @@ export function decideRecovery(cart: CartCase, rules: RecoveryRules, now: Date):
   return reminderOrNothing(discountBlockedBySale ? 'El producto ya está en oferta y el descuento no se combina.' : 'No hay incentivo permitido para este carrito.')
 }
 
-const formatExpiry = (date: Date) => new Intl.DateTimeFormat('es-AR', { weekday: 'long', hour: '2-digit', minute: '2-digit' }).format(date)
+// Mismo formato que private.formato_ars y private.mensaje_promocion en Supabase.
+const messageMoney = (value: number) => `$ ${Math.round(value).toLocaleString('es-AR')}`
+const formatExpiry = (date: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat('es-AR', { timeZone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date)
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? ''
+  return `${part('day')}/${part('month')} a las ${part('hour')}:${part('minute')}`
+}
 
 // Texto que recibiría el cliente. Devuelve null cuando la decisión no envía mensajes.
-export function previewMessage(cart: CartCase, decision: Decision): string | null {
+export function previewMessage(cart: CartCase, decision: Decision, timeZone = 'America/Argentina/Buenos_Aires'): string | null {
   const firstName = cart.customerName.trim().split(/\s+/)[0]
   if (decision.outcome === 'descuento') {
-    return `Hola ${firstName}, vimos que dejaste ${cart.productName} en tu carrito. Te damos un ${decision.discount}% off: pagás ${money(decision.finalTotal)} en lugar de ${money(cart.cartTotal)}. El cupón vence el ${formatExpiry(decision.expiresAt)}.`
+    return `Hola ${firstName}, vimos que dejaste ${cart.productName} en tu carrito. Te damos un ${decision.discount}% off: pagás ${messageMoney(decision.finalTotal)} en lugar de ${messageMoney(cart.cartTotal)}. El cupón vence el ${formatExpiry(decision.expiresAt, timeZone)}.`
   }
   if (decision.outcome === 'envio_gratis') {
-    return `Hola ${firstName}, ${cart.productName} te sigue esperando. Si completás la compra, el envío corre por nuestra cuenta. La promoción vence el ${formatExpiry(decision.expiresAt)}.`
+    return `Hola ${firstName}, ${cart.productName} te sigue esperando. Si completás la compra, el envío corre por nuestra cuenta. La promoción vence el ${formatExpiry(decision.expiresAt, timeZone)}.`
   }
   if (decision.outcome === 'recordatorio') {
     return `Hola ${firstName}, guardamos ${cart.productName} en tu carrito por si querés terminar la compra.`

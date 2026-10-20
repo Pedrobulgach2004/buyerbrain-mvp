@@ -61,6 +61,28 @@ describe('descuento', () => {
   })
 })
 
+describe('paridad con Supabase', () => {
+  // Valores obtenidos al ejecutar private.decidir_recuperacion y private.mensaje_promocion en la base (prueba del 20/10/2026).
+  it('los casos dan el mismo resultado que la base', () => {
+    const expected: Record<string, [string, number?, number?]> = {
+      lucia: ['descuento', 10, 108000], martin: ['descuento', 5, 42750], sofia: ['recordatorio'], diego: ['bloquear'],
+      valentina: ['recordatorio'], tomas: ['envio_gratis'], paula: ['bloquear'], camila: ['esperar'], ana: ['descartar'],
+    }
+    for (const [id, [outcome, discount, finalTotal]] of Object.entries(expected)) {
+      const decision = decideRecovery(byId(id), exampleRules, now)
+      expect(decision.outcome).toBe(outcome)
+      if (decision.outcome === 'descuento') expect([decision.discount, decision.finalTotal]).toEqual([discount, finalTotal])
+    }
+  })
+
+  it('el mensaje usa el mismo texto que envía la base', () => {
+    const lucia = byId('lucia')
+    expect(previewMessage(lucia, decideRecovery(lucia, exampleRules, now))).toBe(
+      'Hola Lucía, vimos que dejaste Campera Nébula en tu carrito. Te damos un 10% off: pagás $ 108.000 en lugar de $ 120.000. El cupón vence el 22/10 a las 15:00.',
+    )
+  })
+})
+
 describe('validación de reglas', () => {
   it('acepta las reglas de ejemplo', () => {
     expect(validateRules(exampleRules)).toEqual({})
