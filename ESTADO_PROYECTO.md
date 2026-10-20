@@ -72,3 +72,18 @@ Ver el diagnóstico completo (ítems 1–21). Resumen por prioridad:
 ## Próximos pasos
 1. Etapa C: correcciones P1 y P2 (botones y destinos, datos fijos en pantalla, reproceso de oportunidad bloqueada, logout ante error, validación de reglas, estado de Telegram en Configuración).
 2. Etapa E: imágenes, seguridad RLS, limpieza y documentación; deploy.
+
+
+## Etapa post-checkpoint 2 (desde 20/10/2026)
+Decisiones: todo gratuito (condición de la universidad); Telegram simula WhatsApp ("bandeja de pruebas"); 3 promociones (recordatorio, descuento, envío gratis); reglas en 3 bloques con valores de ejemplo; reporte de IA en Resumen con Gemini (plan gratuito).
+
+| Fecha | Cambio | Verificación |
+|---|---|---|
+| 20/10/2026 | Conexión MCP de Supabase para Claude Code (token en variable de Windows, nunca en el repo) | Lista tablas y aplica migraciones |
+| 20/10/2026 | Motor de reglas `Frontend/src/lib/rules.ts` + 9 escenarios (`demoCases.ts`) + Vitest | 21 pruebas OK |
+| 20/10/2026 | Migración `reglas_y_escenarios_v2`: política versionada, reglas nuevas, origen tienda/demo, `decidir_recuperacion`, `evaluar_carrito`, `cargar_escenarios_demo` (9 casos + 11 históricos) | Ensayo en transacción revertida: los 9 casos coinciden con el motor de la app; aplicada el 20/10 |
+| 20/10/2026 | Migración `bandeja_telegram_y_seguridad`: vinculación por marca, `preparar_envio_caso`, `confirmar_compra_caso`, mensaje armado por la base; cuentas no pueden cambiar marca/rol, marcas no pueden autoactivar plan; `crear_marca_y_cuenta` | Probado: cambios bloqueados con "permission denied"; aplicada el 20/10 |
+| 20/10/2026 | n8n envío: el nodo de Telegram envía `$json.mensaje` (publicado como "v2 mensaje armado por la base") | Publicado; falta envío real de un caso nuevo |
+| 20/10/2026 | Pantalla de reglas en dos columnas (`RulesSettings.tsx`): 3 bloques, promociones con estado, vista previa del chat en vivo, Guardar al final | En navegador: vista previa cambia al editar (10% → $ 108.000), 80% rechazado y Guardar deshabilitado, Tomás → envío gratis, Paula → sin mensaje, Sofía → recordatorio; Guardar creó la versión 2 en la base; sin desbordes en 1280 px y 375 px |
+
+Pendiente de esta etapa: Actividad multi-caso (2c), registro + Google (3), Dashboard/Resumen (4), reporte con IA (5). Activar en Supabase la protección de contraseñas filtradas (usuario).

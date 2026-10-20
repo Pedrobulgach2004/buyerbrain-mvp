@@ -92,7 +92,10 @@ export default function RulesSettings({ account, refreshAccount }: Props) {
     <div className="rules-v2-config">
       <header className="rules-v2-heading">
         <div><h2 id="rules-v2-title">Política de recuperación</h2><p>BuyerBrain revisa cada carrito con estas reglas antes de contactar al cliente. Los valores iniciales son ejemplos: ajustalos a tu margen, tu stock y tu ritmo de contacto.</p></div>
-        <span className={`rules-v2-version ${dirty ? 'is-dirty' : ''}`}>{dirty ? 'Cambios sin guardar' : account.policyVersion ? `Versión ${account.policyVersion} vigente` : 'Sin guardar todavía'}</span>
+        <div className="rules-v2-heading-side">
+          <span className={`rules-v2-version ${dirty ? 'is-dirty' : ''}`}>{dirty ? 'Cambios sin guardar' : account.policyVersion ? `Versión ${account.policyVersion} vigente` : 'Sin guardar todavía'}</span>
+          <button type="button" className="rules-v2-link-button" onClick={() => { setDraft(toDraft(exampleRules)); setStatus({ kind: 'idle', message: 'Cargamos los valores de ejemplo. Guardalos para aplicarlos.' }) }}>Usar valores de ejemplo</button>
+        </div>
       </header>
 
       <fieldset className="rules-v2-group"><legend>1 · Cuándo contactar</legend>
@@ -122,10 +125,9 @@ export default function RulesSettings({ account, refreshAccount }: Props) {
         })}</div>
       </fieldset>
 
-      <div className="rules-v2-savebar" role="region" aria-label="Guardar reglas">
+      <div className={`rules-v2-savebar${dirty || status.kind === 'saving' || status.kind === 'error' ? ' is-sticky' : ''}`} role="region" aria-label="Guardar reglas">
         <p className={`rules-v2-status is-${status.kind}`} role={status.kind === 'error' ? 'alert' : 'status'}>{status.message || (dirty ? 'Tenés cambios sin guardar.' : 'Las reglas guardadas están vigentes.')}</p>
         <div>
-          <button type="button" className="button button-secondary" onClick={() => { setDraft(toDraft(exampleRules)); setStatus({ kind: 'idle', message: 'Cargamos los valores de ejemplo. Guardalos para aplicarlos.' }) }}>Valores de ejemplo</button>
           <button type="button" className="button button-secondary" disabled={!dirty || status.kind === 'saving'} onClick={() => { setDraft(saved); setStatus({ kind: 'idle', message: '' }) }}>Descartar cambios</button>
           <button type="button" className="button button-primary" disabled={!dirty || hasErrors || status.kind === 'saving'} onClick={() => void save()}>{status.kind === 'saving' ? 'Guardando…' : 'Guardar reglas'}</button>
         </div>

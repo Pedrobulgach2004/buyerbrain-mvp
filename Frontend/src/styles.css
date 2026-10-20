@@ -287,7 +287,7 @@ html[data-theme='light'] .telegram-start-command{background:#edf8fc}
 .rules-v2-promotion em{display:block;margin-top:.35rem;font-size:.78rem;font-style:normal}
 .rules-v2-promotion.is-available em{color:var(--cyan)}
 .rules-v2-promotion.is-blocked em{color:#ffb3c4}
-.rules-v2-savebar{position:sticky;bottom:.75rem;z-index:5;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;padding:.85rem 1rem;border:1px solid rgba(103,216,255,.35);border-radius:16px;background:rgba(2,8,23,.94);box-shadow:0 18px 40px rgba(0,0,0,.35)}
+.rules-v2-savebar{position:static;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;padding:.85rem 1rem;border:1px solid rgba(103,216,255,.35);border-radius:16px;background:rgba(2,8,23,.94);box-shadow:0 18px 40px rgba(0,0,0,.35)}
 .rules-v2-savebar>div{display:flex;flex-wrap:wrap;gap:.5rem}
 .rules-v2-status{margin:0;color:var(--muted);font-size:.84rem}
 .rules-v2-status.is-saved{color:var(--cyan)}
@@ -322,3 +322,7 @@ html[data-theme='light'] .rules-v2-input input,html[data-theme='light'] .rules-v
 html[data-theme='light'] .rules-v2-savebar{background:rgba(255,255,255,.96)}
 @media(max-width:900px){.rules-v2{grid-template-columns:1fr}.rules-v2-preview{position:static}}
 @media(max-width:560px){.rules-v2-rule{flex-direction:column;align-items:stretch}.rules-v2-input{justify-content:flex-end}.rules-v2-heading{flex-direction:column}.rules-v2-savebar>div{width:100%}.rules-v2-savebar .button{flex:1 1 auto;justify-content:center}}
+.rules-v2-savebar.is-sticky{position:sticky;bottom:.75rem;z-index:5}
+.rules-v2-heading-side{display:grid;justify-items:end;gap:.45rem;flex:0 0 auto}
+.rules-v2-link-button{padding:0;border:0;color:var(--cyan);background:none;font:inherit;font-size:.78rem;text-decoration:underline;cursor:pointer}
+@media(max-width:560px){.rules-v2-heading-side{justify-items:start}}
