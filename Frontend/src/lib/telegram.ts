@@ -1,15 +1,11 @@
 import { supabase } from './supabase'
 
-export type TelegramDemoState = {
+// Telegram funciona como "bandeja de pruebas" de la marca: simula el WhatsApp de los clientes ficticios.
+export type TelegramInboxState = {
   connection_state: 'pendiente' | 'conectada' | 'error' | 'revocada' | 'desconectada'
-  customer_name?: string | null
-  consent_state?: 'desconocido' | 'otorgado' | 'revocado' | 'no_aplica' | null
-  consent_at?: string | null
+  linked: boolean
   telegram_username?: string | null
-  send_id?: string | null
-  send_state?: 'pendiente' | 'enviando' | 'enviado' | 'entregado' | 'leido' | 'clic' | 'fallido' | 'cancelado' | null
-  telegram_message_id?: string | null
-  sent_at?: string | null
+  connected_at?: string | null
   last_error?: string | null
 }
 
@@ -42,23 +38,22 @@ async function invoke<T>(name: string, args?: Record<string, unknown>): Promise<
 
 export const telegramDemoGateway = {
   botUsername,
-  getState: () => invoke<TelegramDemoState>('obtener_estado_demo_telegram'),
+  getState: () => invoke<TelegramInboxState>('obtener_bandeja_telegram'),
   createLink: () => invoke<TelegramLink>('crear_vinculacion_demo_telegram'),
   getBotUrl(token: string) {
     if (!botUsername) return null
     return `https://t.me/${encodeURIComponent(botUsername)}?start=${encodeURIComponent(token)}`
   },
-  async sendPromotion(cartId: string): Promise<TelegramDemoState> {
+  // Prepara el envío en Supabase y le pide a n8n que lo mande a la bandeja de pruebas.
+  async sendCase(cartId: string): Promise<void> {
     if (!dispatchWebhookUrl) throw new Error('Falta configurar la URL del envío de Telegram en el frontend.')
-    const dispatch = await invoke<TelegramDispatch>('preparar_envio_demo_telegram', { p_carrito_id: cartId })
-    if (dispatch.already_sent) return invoke<TelegramDemoState>('obtener_estado_demo_telegram')
+    const dispatch = await invoke<TelegramDispatch>('preparar_envio_caso', { p_carrito_id: cartId })
+    if (dispatch.already_sent) return
     const response = await fetch(dispatchWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ envio_id: dispatch.send_id, dispatch_token: dispatch.dispatch_token }),
     })
     if (!response.ok) throw new Error('n8n no pudo completar el envío. El intento quedó guardado para reintentar.')
-    return invoke<TelegramDemoState>('obtener_estado_demo_telegram')
   },
-  disconnect: () => invoke<TelegramDemoState>('desconectar_demo_telegram'),
 }

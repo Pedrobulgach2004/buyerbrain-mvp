@@ -1,5 +1,7 @@
 import type { User } from '@supabase/supabase-js'
 import { supabase } from './supabase'
+import { exampleRules } from './rules'
+import type { PromotionKind, RecoveryRules } from './rules'
 
 export type CommercialRules = {
   discount: string
@@ -21,6 +23,8 @@ export type AccountSnapshot = {
   planEndsAt: string | null
   automationActive: boolean
   policyId: string | null
+  policyVersion: number | null
+  recoveryRules: RecoveryRules
   rules: CommercialRules
   allowedPromotions: string[]
   connections: Record<string, string>
@@ -56,7 +60,7 @@ export async function loadAccountSnapshot(user: User): Promise<AccountSnapshot> 
 
   const { data: policy, error: policyError } = await supabase
     .from('politicas_marketing')
-    .select('id,descuento_maximo,stock_minimo,frecuencia_dias,vencimiento_horas,promociones_permitidas')
+    .select('id,version,descuento_maximo,stock_minimo,frecuencia_dias,vencimiento_horas,promociones_permitidas,espera_horas,monto_minimo,umbral_escalon,descuento_escalon,no_combinar_ofertas')
     .eq('marca_id', account.marca_id)
     .is('vigente_hasta', null)
     .maybeSingle()
@@ -81,6 +85,8 @@ export async function loadAccountSnapshot(user: User): Promise<AccountSnapshot> 
     planEndsAt: brand.plan_fin_en ?? null,
     automationActive: Boolean(brand.automatizacion_activa),
     policyId: policy?.id ?? null,
+    policyVersion: policy?.version ?? null,
+    recoveryRules: policy ? policyToRules(policy) : exampleRules,
     rules: policy ? {
       discount: String(policy.descuento_maximo),
       stock: String(policy.stock_minimo),
@@ -107,42 +113,54 @@ export async function updateAccountProfile(account: AccountSnapshot, values: { b
   if (accountError) throw new Error(`No pudimos actualizar tu nombre: ${accountError.message}`)
 }
 
-export async function saveCommercialPolicy(account: AccountSnapshot, rules: CommercialRules, allowedPromotions: string[]) {
-  if (!supabase) throw new Error('Falta configurar Supabase.')
-  const values = {
-    descuento_maximo: Number(rules.discount),
-    stock_minimo: Number(rules.stock),
-    frecuencia_dias: Number(rules.frequency),
-    vencimiento_horas: Number(rules.expiry),
-    promociones_permitidas: allowedPromotions,
-  }
+const promotionKinds: PromotionKind[] = ['recordatorio', 'descuento', 'envio_gratis']
 
-  if (account.policyId) {
-    const { error } = await supabase.from('politicas_marketing').update(values).eq('id', account.policyId)
-    if (error) throw new Error(`No pudimos guardar las reglas: ${error.message}`)
-    return
-  }
-
-  const { error } = await supabase.from('politicas_marketing').insert({ marca_id: account.brandId, version: 1, ...values })
-  if (error) throw new Error(`No pudimos crear las reglas: ${error.message}`)
+type PolicyRow = {
+  descuento_maximo: number | string; stock_minimo: number; frecuencia_dias: number; vencimiento_horas: number; promociones_permitidas: unknown
+  espera_horas: number; monto_minimo: number | string; umbral_escalon: number | string; descuento_escalon: number | string; no_combinar_ofertas: boolean
 }
 
-export async function activateMonthlyPlan(account: AccountSnapshot, planId: string) {
+function policyToRules(policy: PolicyRow): RecoveryRules {
+  const allowed: unknown[] = Array.isArray(policy.promociones_permitidas) ? policy.promociones_permitidas : []
+  return {
+    waitHours: Number(policy.espera_horas),
+    minCartTotal: Number(policy.monto_minimo),
+    frequencyDays: Number(policy.frecuencia_dias),
+    maxDiscount: Number(policy.descuento_maximo),
+    tierThreshold: Number(policy.umbral_escalon),
+    lowTierDiscount: Number(policy.descuento_escalon),
+    noStackWithSale: Boolean(policy.no_combinar_ofertas),
+    minStock: Number(policy.stock_minimo),
+    couponExpiryHours: Number(policy.vencimiento_horas),
+    allowedPromotions: promotionKinds.filter((kind) => allowed.includes(kind)),
+  }
+}
+
+// Guarda las reglas como una versión nueva; la anterior queda como historial.
+export async function saveRecoveryPolicy(rules: RecoveryRules): Promise<{ version: number }> {
   if (!supabase) throw new Error('Falta configurar Supabase.')
-  if (!account.policyId) throw new Error('Primero guardá tus reglas comerciales.')
+  const { data, error } = await supabase.rpc('guardar_politica', {
+    p_reglas: {
+      espera_horas: rules.waitHours,
+      monto_minimo: rules.minCartTotal,
+      frecuencia_dias: rules.frequencyDays,
+      descuento_maximo: rules.maxDiscount,
+      umbral_escalon: rules.tierThreshold,
+      descuento_escalon: rules.lowTierDiscount,
+      no_combinar_ofertas: rules.noStackWithSale,
+      stock_minimo: rules.minStock,
+      vencimiento_horas: rules.couponExpiryHours,
+      promociones_permitidas: rules.allowedPromotions,
+    },
+  })
+  if (error) throw new Error(`No pudimos guardar las reglas: ${error.message}`)
+  return { version: Number((data as { version: number }).version) }
+}
 
-  const startsAt = new Date()
-  const endsAt = new Date(startsAt)
-  endsAt.setMonth(endsAt.getMonth() + 1)
-
-  const { error } = await supabase.from('marcas').update({
-    plan_o_prueba: planId,
-    plan_inicio_en: startsAt.toISOString(),
-    plan_fin_en: endsAt.toISOString(),
-    estado: 'activa',
-    automatizacion_activa: true,
-  }).eq('id', account.brandId)
-  if (error) throw new Error(`No pudimos activar el plan: ${error.message}`)
+export async function activateDemoPlan() {
+  if (!supabase) throw new Error('Falta configurar Supabase.')
+  const { error } = await supabase.rpc('activar_demo_30_dias')
+  if (error) throw new Error(`No pudimos activar la demo: ${error.message}`)
 }
 
 export async function loadLiveMetrics(account: AccountSnapshot, days: number): Promise<LiveMetrics> {
