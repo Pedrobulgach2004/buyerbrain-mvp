@@ -1,0 +1,162 @@
+{
+  "name": "buyerbrain-reporte-ia",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "buyerbrain-ai-report",
+        "responseMode": "onReceived",
+        "options": {
+          "allowedOrigins": "https://buyerbrain-mvp-3tjb.vercel.app,http://localhost:5180"
+        }
+      },
+      "id": "c1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook reporte",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "buyerbrain-ai-report"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vxtxhyakzkcsuonggyri.supabase.co/rest/v1/rpc/tomar_reporte_ia",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_reporte_id: $json.body.reporte_id, p_dispatch_token: $json.body.dispatch_token }) }}",
+        "options": {}
+      },
+      "id": "c1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Supabase: tomar reporte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        300
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ role: 'user', parts: [{ text: $json.prompt }] }], generationConfig: { temperature: 0.3, responseMimeType: 'application/json', responseSchema: { type: 'OBJECT', properties: { resumen: { type: 'STRING' }, hechos: { type: 'ARRAY', items: { type: 'STRING' } }, hipotesis: { type: 'ARRAY', items: { type: 'STRING' } }, recomendaciones: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['resumen', 'hechos', 'hipotesis', 'recomendaciones'] } } }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "c1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Gemini: generar reporte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        200
+      ],
+      "onError": "continueErrorOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Arma la respuesta para Supabase: el reporte de Gemini o el motivo del error.\nconst pedido = $('Webhook reporte').first().json.body;\nconst base = { p_reporte_id: pedido.reporte_id, p_dispatch_token: pedido.dispatch_token };\nconst respuesta = $input.first().json;\nif (respuesta.error) {\n  const detalle = respuesta.error.message ?? respuesta.error.description ?? JSON.stringify(respuesta.error);\n  return [{ json: { ...base, p_error: String(detalle).slice(0, 300) } }];\n}\ntry {\n  const texto = respuesta.candidates?.[0]?.content?.parts?.[0]?.text ?? '';\n  return [{ json: { ...base, p_contenido: JSON.parse(texto), p_modelo: respuesta.modelVersion ?? 'gemini' } }];\n} catch (error) {\n  return [{ json: { ...base, p_error: 'Gemini devolvió un texto que no es un reporte válido.' } }];\n}"
+      },
+      "id": "c1b2c3d4-0004-4000-8000-000000000004",
+      "name": "Leer respuesta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://vxtxhyakzkcsuonggyri.supabase.co/rest/v1/rpc/guardar_reporte_ia",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "c1b2c3d4-0005-4000-8000-000000000005",
+      "name": "Supabase: guardar reporte",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook reporte": {
+      "main": [
+        [
+          {
+            "node": "Supabase: tomar reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase: tomar reporte": {
+      "main": [
+        [
+          {
+            "node": "Gemini: generar reporte",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Gemini: generar reporte": {
+      "main": [
+        [
+          {
+            "node": "Leer respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Leer respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer respuesta": {
+      "main": [
+        [
+          {
+            "node": "Supabase: guardar reporte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

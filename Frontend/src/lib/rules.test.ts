@@ -1,18 +1,32 @@
 import { describe, expect, it } from 'vitest'
 import { buildDemoCases } from './demoCases'
+import type { DemoCase } from './demoCases'
 import { decideRecovery, exampleRules, previewMessage, validateRules } from './rules'
 
 const now = new Date('2026-10-20T15:00:00-03:00')
 const cases = buildDemoCases(now)
-const byId = (id: string) => cases.find((item) => item.id === id)!
+const hoursAgo = (hours: number) => new Date(now.getTime() - hours * 60 * 60 * 1000)
+// Casos que ya no están en la demo pero cubren otras ramas del motor (escalón menor, stock, consentimiento y compra posterior).
+const base = { ...cases[0], abandonedAt: hoursAgo(4) }
+const extraCases: DemoCase[] = [
+  { ...base, id: 'martin', customerName: 'Martín Ruiz', productName: 'Anteojos de sol Aurora', cartTotal: 45000, scenario: '', expectedWithExampleRules: 'descuento' },
+  { ...base, id: 'sofia', customerName: 'Sofía Paz', productName: 'Zapatillas Orbit', cartTotal: 160000, stock: 2, scenario: '', expectedWithExampleRules: 'recordatorio' },
+  { ...base, id: 'paula', customerName: 'Paula Luna', productName: 'Vestido Marea', cartTotal: 88000, consent: false, scenario: '', expectedWithExampleRules: 'bloquear' },
+  { ...base, id: 'ana', customerName: 'Ana Prado', productName: 'Campera Nébula', cartTotal: 120000, purchasedAfterAbandon: true, scenario: '', expectedWithExampleRules: 'descartar' },
+]
+const byId = (id: string) => [...cases, ...extraCases].find((item) => item.id === id)!
 
 describe('casos de demostración con las reglas de ejemplo', () => {
-  it.each(cases.map((item) => [item.id, item.expectedWithExampleRules]))('%s → %s', (id, expected) => {
+  it('la demo tiene 5 casos, uno por cada decisión', () => {
+    expect(cases.map((item) => item.expectedWithExampleRules).sort()).toEqual(['bloquear', 'descuento', 'envio_gratis', 'esperar', 'recordatorio'])
+  })
+
+  it.each([...cases, ...extraCases].map((item) => [item.id, item.expectedWithExampleRules]))('%s → %s', (id, expected) => {
     expect(decideRecovery(byId(id), exampleRules, now).outcome).toBe(expected)
   })
 
   it('cada decisión que no envía mensaje explica el motivo', () => {
-    for (const item of cases) {
+    for (const item of [...cases, ...extraCases]) {
       const decision = decideRecovery(item, exampleRules, now)
       expect(decision.reason.length).toBeGreaterThan(10)
       if (['bloquear', 'descartar', 'esperar'].includes(decision.outcome)) expect(previewMessage(item, decision)).toBeNull()
