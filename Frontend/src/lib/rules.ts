@@ -33,9 +33,9 @@ export const exampleRules: RecoveryRules = {
 }
 
 export const promotionCatalog: { id: PromotionKind; label: string; description: string }[] = [
-  { id: 'recordatorio', label: 'Recordatorio sin incentivo', description: 'Avisa que el carrito sigue disponible, sin costo para la marca.' },
-  { id: 'descuento', label: 'Descuento porcentual', description: 'Cupón limitado por el descuento máximo y el escalonado por monto.' },
-  { id: 'envio_gratis', label: 'Envío gratis', description: 'Alternativa cuando el descuento no corresponde, siempre sobre el monto mínimo.' },
+  { id: 'recordatorio', label: 'Recordatorio sin incentivo', description: 'Le recuerda al cliente que dejó productos en el carrito. No te cuesta nada.' },
+  { id: 'descuento', label: 'Descuento porcentual', description: 'Un cupón de descuento, nunca mayor al máximo que definiste arriba.' },
+  { id: 'envio_gratis', label: 'Envío gratis', description: 'Se ofrece cuando no corresponde descuento, por ejemplo si el producto ya está en oferta.' },
 ]
 
 export type CartCase = {

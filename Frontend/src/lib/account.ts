@@ -10,6 +10,24 @@ export type CommercialRules = {
   expiry: string
 }
 
+// Zonas que puede elegir la marca. La base también valida que la zona exista.
+export const timeZoneOptions = [
+  { id: 'America/Argentina/Buenos_Aires', label: 'Argentina (Buenos Aires)' },
+  { id: 'America/Montevideo', label: 'Uruguay (Montevideo)' },
+  { id: 'America/Santiago', label: 'Chile (Santiago)' },
+  { id: 'America/Asuncion', label: 'Paraguay (Asunción)' },
+  { id: 'America/Sao_Paulo', label: 'Brasil (São Paulo)' },
+  { id: 'America/Lima', label: 'Perú (Lima)' },
+  { id: 'America/Bogota', label: 'Colombia (Bogotá)' },
+  { id: 'America/Mexico_City', label: 'México (Ciudad de México)' },
+  { id: 'Europe/Madrid', label: 'España (Madrid)' },
+]
+const fallbackTimeZone = 'America/Argentina/Buenos_Aires'
+// Una zona inválida rompe todas las fechas de la app: si pasa, se usa la de Argentina.
+export function safeTimeZone(value: string | null | undefined) {
+  try { new Intl.DateTimeFormat('es-AR', { timeZone: value ?? fallbackTimeZone }); return value ?? fallbackTimeZone } catch { return fallbackTimeZone }
+}
+
 export type AccountSnapshot = {
   userId: string
   brandId: string
@@ -22,19 +40,13 @@ export type AccountSnapshot = {
   planStartsAt: string | null
   planEndsAt: string | null
   automationActive: boolean
+  sendsPaused: boolean
   policyId: string | null
   policyVersion: number | null
   recoveryRules: RecoveryRules
   rules: CommercialRules
   allowedPromotions: string[]
   connections: Record<string, string>
-}
-
-export type LiveMetrics = {
-  detected: number
-  coupons: number
-  recovered: number
-  revenue: number
 }
 
 const defaultRules: CommercialRules = { discount: '15', stock: '3', frequency: '7', expiry: '48' }
@@ -79,11 +91,12 @@ export async function loadAccountSnapshot(user: User): Promise<AccountSnapshot> 
     name: account.nombre_visible,
     role: account.rol,
     brand: brand.nombre,
-    timezone: brand.zona_horaria,
+    timezone: safeTimeZone(brand.zona_horaria),
     planId: brand.plan_o_prueba && brand.plan_o_prueba !== 'prueba' ? brand.plan_o_prueba : null,
     planStartsAt: brand.plan_inicio_en ?? null,
     planEndsAt: brand.plan_fin_en ?? null,
     automationActive: Boolean(brand.automatizacion_activa),
+    sendsPaused: Boolean(brand.envios_pausados),
     policyId: policy?.id ?? null,
     policyVersion: policy?.version ?? null,
     recoveryRules: policy ? policyToRules(policy) : exampleRules,
@@ -161,27 +174,4 @@ export async function activateDemoPlan() {
   if (!supabase) throw new Error('Falta configurar Supabase.')
   const { error } = await supabase.rpc('activar_demo_30_dias')
   if (error) throw new Error(`No pudimos activar la demo: ${error.message}`)
-}
-
-export async function loadLiveMetrics(account: AccountSnapshot, days: number): Promise<LiveMetrics> {
-  if (!supabase) throw new Error('Falta configurar Supabase.')
-  const since = new Date()
-  since.setDate(since.getDate() - days)
-  const sinceIso = since.toISOString()
-
-  const [detected, coupons, recovered, attributions] = await Promise.all([
-    supabase.from('carritos').select('id', { count: 'exact', head: true }).eq('marca_id', account.brandId).gte('detectado_en', sinceIso),
-    supabase.from('promociones').select('id', { count: 'exact', head: true }).in('estado_cupon', ['confirmado', 'usado']).gte('creado_en', sinceIso),
-    supabase.from('carritos').select('id', { count: 'exact', head: true }).eq('marca_id', account.brandId).eq('estado', 'recuperado').gte('actualizado_en', sinceIso),
-    supabase.from('atribuciones').select('monto_recuperado').eq('resultado', 'atribuida').gte('creado_en', sinceIso),
-  ])
-
-  const firstError = detected.error ?? coupons.error ?? recovered.error ?? attributions.error
-  if (firstError) throw new Error(`No pudimos cargar las métricas: ${firstError.message}`)
-  return {
-    detected: detected.count ?? 0,
-    coupons: coupons.count ?? 0,
-    recovered: recovered.count ?? 0,
-    revenue: (attributions.data ?? []).reduce((total, item) => total + Number(item.monto_recuperado ?? 0), 0),
-  }
 }
