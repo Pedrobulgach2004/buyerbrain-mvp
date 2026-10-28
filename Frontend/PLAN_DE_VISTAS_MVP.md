@@ -38,7 +38,7 @@ Encabezado, navegación, botones, campos, tarjetas, métricas, indicadores de es
 - Las ofertas se describen como personalizadas según el carrito, las categorías y el recorrido autorizado dentro de la tienda. Cualquier dato de perfil o demográfico solo podría tratarse con una finalidad definida, base válida, minimización y consentimiento cuando corresponda; la demo no recolecta ni procesa datos personales reales.
 - El Dashboard presenta métricas, embudo, efectividad de promociones, actividad y un detalle de recorrido por acción. Todos sus nombres, importes, productos, mensajes y resultados son ficticios; el selector de período solo cambia datos locales de demostración.
 - Resumen funciona como lectura ejecutiva del Dashboard: compara períodos, muestra impacto, segmentos agregados e insights. Los perfiles usan iniciales, región general y datos ficticios; no hay exportación, persistencia ni datos personales reales.
-- Configuración concentra los controles demostrativos de la marca en pestañas: perfil, conexiones, reglas comerciales, abono mensual, privacidad y cierre de sesión. La antigua ruta `/conexion` redirige a la pestaña de conexiones. Los planes Esencial, Crecimiento y Escala incluyen una prueba gratuita de 7 días; los precios y la facturación son visuales y no procesan cobros.
+- Configuración concentra los controles demostrativos de la marca en pestañas: perfil, conexiones, reglas comerciales, abono mensual, privacidad y cierre de sesión. La antigua ruta `/conexion` redirige a la pestaña de conexiones. Hay un único plan (Plan BuyerBrain, $ 45.000 por mes, todo incluido) con prueba gratuita de 30 días; el precio y la facturación son visuales y no procesan cobros.
 
 ## Aprobación de cada ciclo
 
