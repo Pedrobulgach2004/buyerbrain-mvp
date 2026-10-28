@@ -42,7 +42,7 @@ const pricingPlan = {
   features: [
     'Conexión con tu tienda online',
     'Reglas de promoción con vista previa',
-    'Mensajes por WhatsApp incluidos',
+    'Mensajes por Telegram incluidos',
     'Seguimiento de cada carrito',
     'Dashboard con ventas recuperadas',
     'Reporte con IA para ajustar tus reglas',
